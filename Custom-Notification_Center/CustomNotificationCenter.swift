@@ -1,10 +1,3 @@
-//
-//  CustomNotificationCenter.swift
-//  CustomNotificationCenter
-//
-//  Created by Syed, Waseem on 10/29/19.
-//  Copyright © 2019 Syed, Waseem. All rights reserved.
-//
 
 import Foundation
 
