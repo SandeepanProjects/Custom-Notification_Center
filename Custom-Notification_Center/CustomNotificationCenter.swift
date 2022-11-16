@@ -42,9 +42,26 @@ class CustomNotificationCenter: CustomNotificationCenterProtocol {
     }
 
     
-    func post(name: String, object: Any?, userInfo: [AnyHashable : Any]?) {
-        notificationsMap[name] = CustomNotification(name: name, userInfo: userInfo)
+   func postNotification(_ name: String, object: Any) throws {
+    
+    var atLeastOneNotificationFound = false
+    for (_, notificationData) in notificationsStorage {
+        // Go through all the notifications and do the
+        // Matching with name
+        for (notificationName, closures) in notificationData {
+            // Check if the notification name matches
+            guard notificationName == name else { continue }
+            for closure in closures {
+                atLeastOneNotificationFound = true
+                closure(name, object)
+            }
+        }
     }
+    
+    if !atLeastOneNotificationFound {
+        throw NotificationCenterError.notificationNotFound
+    }
+}
     
     func addObserver(forName name: String, object: Any?, queue: OperationQueue?, completion: (CustomNotification) -> Void) {
         guard let notification = notificationsMap[name] else {
