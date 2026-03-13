@@ -85,3 +85,117 @@ class CustomNotificationCenter: CustomNotificationCenterProtocol {
     }
     
 }
+
+
+
+
+new code 
+
+
+import Foundation
+
+protocol CustomNotificationCenterProtocol: AnyObject {
+    func post(name: String, object: Any?, userInfo: [AnyHashable: Any]?)
+    func addObserver(
+        forName name: String,
+        queue: OperationQueue?,
+        using: @escaping (CustomNotification) -> Void
+    )
+    func removeObservers(name: String)
+}
+
+struct CustomNotification {
+    let name: String
+    let object: Any?
+    let userInfo: [AnyHashable: Any]?
+}
+
+class CustomNotificationCenter: CustomNotificationCenterProtocol {
+    
+    static let shared = CustomNotificationCenter()
+    
+    private init() {}
+    
+    private struct Observer {
+        let queue: OperationQueue?
+        let handler: (CustomNotification) -> Void
+    }
+    
+    private let syncQueue = DispatchQueue(
+        label: "custom.notification.center",
+        attributes: .concurrent
+    )
+    
+    private var observers: [String: [Observer]] = [:]
+    
+    // MARK: - Post
+    
+    func post(name: String, object: Any?, userInfo: [AnyHashable : Any]?) {
+        
+        let notification = CustomNotification(
+            name: name,
+            object: object,
+            userInfo: userInfo
+        )
+        
+        var currentObservers: [Observer] = []
+        
+        syncQueue.sync {
+            currentObservers = observers[name] ?? []
+        }
+        
+        for observer in currentObservers {
+            if let queue = observer.queue {
+                queue.addOperation {
+                    observer.handler(notification)
+                }
+            } else {
+                observer.handler(notification)
+            }
+        }
+    }
+    
+    // MARK: - Add Observer
+    
+    func addObserver(
+        forName name: String,
+        queue: OperationQueue?,
+        using: @escaping (CustomNotification) -> Void
+    ) {
+        let observer = Observer(queue: queue, handler: using)
+        
+        syncQueue.async(flags: .barrier) {
+            self.observers[name, default: []].append(observer)
+        }
+    }
+    
+    // MARK: - Remove
+    
+    func removeObservers(name: String) {
+        syncQueue.async(flags: .barrier) {
+            self.observers[name] = nil
+        }
+    }
+}
+
+use this code
+
+func fetchProfile() {
+
+    CustomNotificationCenter.shared.post(
+        name: "profileUpdated",
+        object: nil,
+        userInfo: ["name": "John"]
+    )
+}
+
+
+CustomNotificationCenter.shared.addObserver(
+    forName: "profileUpdated",
+    queue: .main
+) { notification in
+
+    if let name = notification.userInfo?["name"] as? String {
+        print("Profile updated:", name)
+    }
+}
